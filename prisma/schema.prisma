@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model School {
+  id          String         @id @default(uuid())
+  name        String
+  code        String         @unique
+  address     String?
+  motto       String?        @default("Growing Together Under the Ancient Canopy")
+  classes     SchoolClass[]
+  teachers    TeacherProfile[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model TeacherProfile {
+  id          String        @id @default(uuid())
+  email       String        @unique
+  fullName    String
+  title       String?       @default("Forest Ranger & Instructor")
+  avatar      String?       @default("ranger")
+  schoolId    String
+  school      School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classes     SchoolClass[]
+  sessions    AttendanceSession[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model SchoolClass {
+  id          String              @id @default(uuid())
+  name        String              // e.g. "Grade 1 - Super Stars"
+  code        String              @unique // e.g. "1-A"
+  grade       Int                 @default(1)
+  section     String              @default("A")
+  room        String?             @default("Hut 1")
+  hutStyle    String              @default("oak") // oak, birch, willow, pine
+  hutColor    String              @default("#22c55e")
+  schoolId    String
+  school      School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherId   String?
+  teacher     TeacherProfile?     @relation(fields: [teacherId], references: [id])
+  students    ClassEnrollment[]
+  sessions    AttendanceSession[]
+  progress    ForestProgress?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model Student {
+  id          String            @id @default(uuid())
+  rollNumber  String            @unique // e.g. "STU-301" or "CS101"
+  fullName    String
+  gender      String?           @default("Other") // Boy, Girl, Other
+  avatarIcon  String?           @default("sprout")
+  parentPhone String?
+  treeSpecies String?           @default("Emerald Oak") // e.g. Emerald Oak, Golden Birch, Twilight Willow, Star Blossom
+  enrollments ClassEnrollment[]
+  records     AttendanceRecord[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model ClassEnrollment {
+  id        String      @id @default(uuid())
+  studentId String
+  student   Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId   String
+  class     SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  status    String      @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([studentId, classId])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model AttendanceSession {
+  id            String             @id @default(uuid())
+  classId       String
+  class         SchoolClass        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  date          DateTime           @db.Date
+  status        String             @default("DRAFT") // DRAFT, FINALIZED
+  notes         String?
+  totalStudents Int                @default(0)
+  presentCount  Int                @default(0)
+  absentCount   Int                @default(0)
+  lateCount     Int                @default(0)
+  excusedCount  Int                @default(0)
+  teacherId     String?
+  teacher       TeacherProfile?    @relation(fields: [teacherId], references: [id])
+  records       AttendanceRecord[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([classId, date])
+}
+
+model AttendanceRecord {
+  id          String            @id @default(uuid())
+  sessionId   String
+  session     AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status      AttendanceStatus  @default(PRESENT)
+  note        String?
+  checkInTime DateTime?
+  auditLogs   AuditLog[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([sessionId, studentId])
+}
+
+model AuditLog {
+  id          String             @id @default(uuid())
+  sessionId   String
+  session     AttendanceSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  recordId    String?
+  record      AttendanceRecord?  @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  actor       String             @default("Teacher")
+  action      String             // e.g. "STATUS_CHANGE", "BULK_PRESENT", "SESSION_FINALIZED"
+  oldValue    String?
+  newValue    String?
+  timestamp   DateTime           @default(now())
+}
+
+model ForestProgress {
+  id            String      @id @default(uuid())
+  classId       String      @unique
+  class         SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  level         Int         @default(1)
+  currentXp     Int         @default(0)
+  nextLevelXp   Int         @default(100)
+  totalSessions Int         @default(0)
+  bloomRank     String      @default("Emerald Seedling") // Emerald Seedling, Whispering Sapling, Ancient Oak, Golden Sanctuary
+  fireflies     Int         @default(12)
+  updatedAt     DateTime    @updatedAt
+}
