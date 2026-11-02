@@ -1,6 +1,12 @@
 import { PrismaClient, AttendanceStatus } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
 
 async function main() {
   console.log('🌲 Seeding Forest Quest attendance system...');
