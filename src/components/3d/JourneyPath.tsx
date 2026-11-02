@@ -27,9 +27,14 @@ export default function JourneyPath({ onComplete, speed = 0.08 }: JourneyPathPro
     ]);
   }, []);
 
+  const hasCompletedRef = useRef(false);
+
   useFrame((_, delta) => {
     if (progressRef.current >= 1) {
-      onComplete();
+      if (!hasCompletedRef.current) {
+        hasCompletedRef.current = true;
+        onComplete();
+      }
       return;
     }
 

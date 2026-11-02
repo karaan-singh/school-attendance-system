@@ -1,38 +1,14 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { createTempleNightRenderer } from "./templeNightRenderer.js";
+import { useEffect, useRef, useState } from "react";
+import { createTempleNightRenderer } from "./templeNightRenderer";
 
-/* The Yosemite world is a sibling of this one: same rig, same foreground
-   plates, same bloom chain, a different valley. It is reached as a variant of
-   this scene rather than as its own entry, and it is loaded lazily so that
-   opening either world never downloads both renderers. */
-const YosemiteSunsetScene = lazy(() =>
-  import("../yosemite-sunset/YosemiteSunsetScene").then((module) => ({ default: module.YosemiteSunsetScene })),
-);
-const PresidioSunsetScene = lazy(() =>
-  import("../presidio-sunset/PresidioSunsetScene").then((module) => ({ default: module.PresidioSunsetScene })),
-);
-const LakeLouiseScene = lazy(() =>
-  import("../lake-louise/LakeLouiseScene").then((module) => ({ default: module.LakeLouiseScene })),
-);
-
-export type TempleNightVariant = "temple-night" | "yosemite-sunset" | "presidio-sunset" | "lake-louise";
+export type TempleNightVariant = "temple-night";
 
 export type TempleNightSceneProps = {
   className?: string;
-  variant?: TempleNightVariant;
+  variant?: string;
 };
 
-export function TempleNightScene({ className = "", variant = "temple-night" }: TempleNightSceneProps) {
-  const fallback = <div className={`temple-night-scene${className ? ` ${className}` : ""}`} data-state="loading" />;
-  if (variant === "yosemite-sunset") {
-    return <Suspense fallback={fallback}><YosemiteSunsetScene className={className} /></Suspense>;
-  }
-  if (variant === "presidio-sunset") {
-    return <Suspense fallback={fallback}><PresidioSunsetScene className={className} /></Suspense>;
-  }
-  if (variant === "lake-louise") {
-    return <Suspense fallback={fallback}><LakeLouiseScene className={className} /></Suspense>;
-  }
+export function TempleNightScene({ className = "" }: TempleNightSceneProps) {
   return <TempleNightWorld className={className} />;
 }
 

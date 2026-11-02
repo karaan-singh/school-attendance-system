@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCachedClasses, setCachedClasses } from '@/lib/serverCache';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const cached = getCachedClasses();
+    if (cached) {
+      return NextResponse.json(
+        { classes: cached },
+        {
+          headers: {
+            'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+            'X-Cache': 'HIT',
+          },
+        }
+      );
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -48,7 +62,17 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ classes: formatted });
+    setCachedClasses(formatted);
+
+    return NextResponse.json(
+      { classes: formatted },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+          'X-Cache': 'MISS',
+        },
+      }
+    );
   } catch (error: any) {
     console.warn('Database offline or unreachable, using fallback demo classes:', error.message);
     const fallbackClasses = [

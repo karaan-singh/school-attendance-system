@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { TempleNightScene } from '@designcodeio/threeui';
-import '@designcodeio/threeui/style.css';
+import { TempleNightScene } from '@/shaders/temple-night/TempleNightScene';
 import CanvasContainer from './CanvasContainer';
 import ExplorerModel from './ExplorerModel';
-import { FastForward, Compass, Sparkles, Trees, Eye, Moon, Flame } from 'lucide-react';
+import { FastForward, Compass, Sparkles, Trees, Eye, Sun, Flame } from 'lucide-react';
 import { useGameStore } from '@/store/useGameStore';
 
 export function Scene() {
@@ -62,14 +61,14 @@ export default function TempleNightJourneyScene({
   const walkerXPercent = Math.min(Math.max(progress * 100, 4), 92);
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#060a0f] select-none">
-      {/* ThreeUI Exact Authored Temple Night Scene */}
+    <div className="relative h-full w-full overflow-hidden bg-[#93c5fd] select-none">
+      {/* ThreeUI Exact Authored Sunlit Temple Scene */}
       <div className="absolute inset-0 h-full w-full">
         <Scene />
       </div>
 
-      {/* Atmospheric Vignette & Temple Night Title Watermark */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/60" />
+      {/* Atmospheric Vignette & Daylight Title Watermark */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-sky-900/20" />
 
       {/* 3D Silas the Woodcutter Walking Expedition Foreground Overlay */}
       <div
@@ -80,16 +79,16 @@ export default function TempleNightJourneyScene({
         }}
       >
         {/* Guide Floating Speech / Status Pill */}
-        <div className="mb-2 flex items-center gap-2 rounded-full border border-amber-400/40 bg-black/75 px-3 py-1 text-[11px] font-bold text-amber-200 shadow-xl backdrop-blur-md animate-bounce">
+        <div className="mb-2 flex items-center gap-2 rounded-full border border-amber-300/60 bg-white/90 px-3 py-1 text-[11px] font-bold text-amber-900 shadow-xl backdrop-blur-md animate-bounce">
           <span className="text-xs">🪓</span>
           <span>
             {progress < 0.35
-              ? 'Silas passing the Kyoto Torii gates...'
+              ? 'Silas passing the golden Kyoto Torii gates...'
               : progress < 0.75
-              ? 'Rain washes the stone lanterns...'
-              : 'Approaching the Whispering Grove!'}
+              ? 'Morning sunlight warms the stone lanterns...'
+              : 'Approaching the Sunlit Whispering Grove!'}
           </span>
-          <span className="font-mono text-[10px] text-amber-400">
+          <span className="font-mono text-[10px] text-amber-600">
             {Math.round(progress * 100)}%
           </span>
         </div>
@@ -97,9 +96,9 @@ export default function TempleNightJourneyScene({
         {/* 3D Animated Woodcutter Walker Canvas */}
         <div className="h-36 w-36 pointer-events-auto">
           <CanvasContainer cameraPosition={[0, 1.2, 3.8]} enableControls={false}>
-            <ambientLight intensity={0.9} />
-            <directionalLight position={[2, 4, 3]} intensity={1.8} color="#fed7aa" />
-            <pointLight position={[0, 1.5, 0.5]} intensity={1.5} color="#f59e0b" distance={4} />
+            <ambientLight intensity={1.2} />
+            <directionalLight position={[2, 4, 3]} intensity={2.2} color="#fffbeb" />
+            <pointLight position={[0, 1.5, 0.5]} intensity={1.8} color="#f59e0b" distance={5} />
             <group rotation={[0, Math.PI / 2 + 0.25, 0]} position={[0, -0.65, 0]}>
               <ExplorerModel isWalking={true} scale={1.35} guide="WOODCUTTER" />
             </group>
@@ -110,21 +109,21 @@ export default function TempleNightJourneyScene({
       {/* Bottom Expedition Journey HUD */}
       <div className="pointer-events-none absolute bottom-4 inset-x-0 z-30 flex items-center justify-between px-6">
         {/* Lore / Status Badge */}
-        <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-white/10 bg-black/70 px-4 py-2.5 shadow-2xl backdrop-blur-md">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
-            <Moon className="h-4 w-4" />
+        <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-white/40 bg-white/85 px-4 py-2.5 shadow-2xl backdrop-blur-md">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+            <Sun className="h-4 w-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                Chapter II • Night Expedition
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                Chapter II • Sunlit Temple Expedition
               </span>
-              <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-mono text-amber-300">
-                ThreeUI Temple Night
+              <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-mono text-amber-800 font-bold">
+                Sunlit Kyoto Mountain
               </span>
             </div>
-            <p className="text-xs text-slate-300 font-medium">
-              Silas guides the journey under the blood moon through Kyoto temple cedar woods
+            <p className="text-xs text-slate-700 font-medium">
+              Silas guides the journey under morning sunlight through Kyoto temple mountain cedars
             </p>
           </div>
         </div>

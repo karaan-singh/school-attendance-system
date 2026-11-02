@@ -2,11 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import CanvasContainer from '@/components/3d/CanvasContainer';
-import VillageScene from '@/components/3d/VillageScene';
-import StoryJournalModal from '@/features/story/StoryJournalModal';
-import WoodcutterStoryboardModal from '@/features/story/WoodcutterStoryboardModal';
+import dynamic from 'next/dynamic';
 import { SchoolClassData } from '@/types';
+import { fetchWithCache, getCachedData } from '@/lib/apiCache';
+
+const CanvasContainer = dynamic(() => import('@/components/3d/CanvasContainer'), {
+  ssr: false,
+});
+const VillageScene = dynamic(() => import('@/components/3d/VillageScene'), {
+  ssr: false,
+});
+const StoryJournalModal = dynamic(() => import('@/features/story/StoryJournalModal'), {
+  ssr: false,
+});
+const WoodcutterStoryboardModal = dynamic(
+  () => import('@/features/story/WoodcutterStoryboardModal'),
+  { ssr: false }
+);
 import {
   Compass,
   Users,
@@ -70,18 +82,19 @@ const VILLAGE_REALMS: VillageRealm[] = [
 
 export default function VillageHubPage() {
   const router = useRouter();
-  const [classes, setClasses] = useState<SchoolClassData[]>([]);
+  const [classes, setClasses] = useState<SchoolClassData[]>(() => {
+    return getCachedData<{ classes: SchoolClassData[] }>('/api/classes')?.classes || [];
+  });
   const [activeGrade, setActiveGrade] = useState<number>(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(classes.length === 0);
   const [showLoreModal, setShowLoreModal] = useState(false);
   const [showWoodcutterModal, setShowWoodcutterModal] = useState(false);
   const { selectClass, setChapter, selectedGuide } = useGameStore();
 
   useEffect(() => {
-    fetch('/api/classes')
-      .then((res) => res.json())
+    fetchWithCache<{ classes: SchoolClassData[] }>('/api/classes')
       .then((data) => {
-        if (data.classes) setClasses(data.classes);
+        if (data?.classes) setClasses(data.classes);
       })
       .catch((err) => console.error(err))
       .finally(() => setIsLoading(false));

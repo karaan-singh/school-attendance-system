@@ -9,19 +9,20 @@ import {
   FileText,
 } from 'lucide-react';
 import { SchoolClassData } from '@/types';
+import { fetchWithCache, getCachedData } from '@/lib/apiCache';
 
 export default function ReportsHubPage() {
-  const [classes, setClasses] = useState<SchoolClassData[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  const cached = getCachedData<{ classes: SchoolClassData[] }>('/api/classes')?.classes || [];
+  const [classes, setClasses] = useState<SchoolClassData[]>(cached);
+  const [selectedClassId, setSelectedClassId] = useState<string>(cached[0]?.id || '');
+  const [isLoading, setIsLoading] = useState(cached.length === 0);
 
   useEffect(() => {
-    fetch('/api/classes')
-      .then((res) => res.json())
+    fetchWithCache<{ classes: SchoolClassData[] }>('/api/classes')
       .then((data) => {
-        if (data.classes && data.classes.length > 0) {
+        if (data?.classes && data.classes.length > 0) {
           setClasses(data.classes);
-          setSelectedClassId(data.classes[0].id);
+          if (!selectedClassId) setSelectedClassId(data.classes[0].id);
         }
       })
       .catch((err) => console.error(err))

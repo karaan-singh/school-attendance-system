@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { AttendanceStatus, StudentRecord, AttendanceSessionData } from '@/types';
 import { forestAudio } from '@/lib/audio';
+import { invalidateCache } from '@/lib/apiCache';
 
 interface UndoItem {
   studentId: string;
@@ -126,6 +127,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         throw new Error('Failed to persist record to server');
       }
 
+      invalidateCache('/api/sessions');
       set({ isSaving: false });
       return true;
     } catch (err: any) {
@@ -171,6 +173,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         checkInTime: s.checkInTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }));
 
+      invalidateCache('/api/sessions');
       set({
         students: updated,
         currentSession: {
@@ -227,6 +230,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
       const data = await res.json();
       forestAudio.playCelebrationFanfare();
+      invalidateCache('/api/sessions');
+      invalidateCache('/api/classes');
 
       set({
         currentSession: {

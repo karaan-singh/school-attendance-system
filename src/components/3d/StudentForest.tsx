@@ -16,25 +16,28 @@ import { ForestMushrooms, FlyingBirds } from './NatureElements';
 import ExplorerModel from './ExplorerModel';
 import ForestParticles from './ForestParticles';
 import SkyAtmosphere from './SkyAtmosphere';
+import { getDeviceTier } from '@/lib/deviceTier';
 
 // Dynamic animated river brook with multi-shaded realistic blue and white water layers (NO black lining)
 function ConnectingRiverBrook() {
   const waterRef = useRef<THREE.Mesh>(null);
   const foamRibbonRef = useRef<THREE.Group>(null);
   const deepCurrentRef = useRef<THREE.Mesh>(null);
+  const frameCount = useRef(0);
+  const tier = useMemo(() => getDeviceTier(), []);
 
   useFrame(({ clock }) => {
+    frameCount.current++;
+    const shouldUpdateWave = frameCount.current % (tier.isLowEnd ? 3 : 2) === 0;
     const t = clock.getElapsedTime();
-    // Dynamic physical cascading vertex waves on main water surface
-    if (waterRef.current) {
+    // Dynamic physical cascading vertex waves on main water surface (optimized Float32Array iteration)
+    if (shouldUpdateWave && waterRef.current) {
       const pos = waterRef.current.geometry.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const y = pos.getY(i);
-        const x = pos.getX(i);
-        const zWave =
-          Math.sin(y * 1.1 - t * 4.8) * 0.05 +
-          Math.cos(x * 2.2 + t * 3.4) * 0.03;
-        pos.setZ(i, zWave);
+      const arr = pos.array as Float32Array;
+      for (let i = 0; i < arr.length; i += 3) {
+        const x = arr[i];
+        const y = arr[i + 1];
+        arr[i + 2] = Math.sin(y * 1.1 - t * 4.8) * 0.05 + Math.cos(x * 2.2 + t * 3.4) * 0.03;
       }
       pos.needsUpdate = true;
     }

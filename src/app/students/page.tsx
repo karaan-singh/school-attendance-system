@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import ExcelImportWizard from '@/features/excel/ExcelImportWizard';
+import dynamic from 'next/dynamic';
 import { SchoolClassData } from '@/types';
+import { fetchWithCache, getCachedData } from '@/lib/apiCache';
+
+const ExcelImportWizard = dynamic(() => import('@/features/excel/ExcelImportWizard'), {
+  ssr: false,
+});
 import {
   Users,
   Search,
@@ -20,26 +25,25 @@ const VILLAGE_NAMES: Record<number, string> = {
 };
 
 export default function StudentsRosterPage() {
-  const [classes, setClasses] = useState<SchoolClassData[]>([]);
+  const cached = getCachedData<{ classes: SchoolClassData[] }>('/api/classes')?.classes || [];
+  const [classes, setClasses] = useState<SchoolClassData[]>(cached);
   const [activeGrade, setActiveGrade] = useState<number>(1);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [students, setStudents] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(cached.length === 0);
   const [showImport, setShowImport] = useState(false);
 
   const fetchRoster = async () => {
     setIsLoading(true);
     try {
-      const classRes = await fetch('/api/classes');
-      const classData = await classRes.json();
+      const classData = await fetchWithCache<{ classes: SchoolClassData[] }>('/api/classes');
       if (classData.classes && classData.classes.length > 0) {
         setClasses(classData.classes);
         const firstInGrade = classData.classes.find((c: SchoolClassData) => c.grade === activeGrade) || classData.classes[0];
         setSelectedClassId(firstInGrade.id);
 
-        const sessionRes = await fetch(`/api/sessions?classId=${firstInGrade.id}`);
-        const sessionData = await sessionRes.json();
+        const sessionData = await fetchWithCache<{ session: { records: any[] } }>(`/api/sessions?classId=${firstInGrade.id}`);
         if (sessionData.session?.records) {
           setStudents(sessionData.session.records);
         }
@@ -65,10 +69,15 @@ export default function StudentsRosterPage() {
 
   const handleClassTabChange = async (classId: string) => {
     setSelectedClassId(classId);
-    setIsLoading(true);
+    const cached = getCachedData<{ session: { records: any[] } }>(`/api/sessions?classId=${classId}`);
+    if (cached?.session?.records) {
+      setStudents(cached.session.records);
+    } else {
+      setIsLoading(true);
+    }
+
     try {
-      const sessionRes = await fetch(`/api/sessions?classId=${classId}`);
-      const sessionData = await sessionRes.json();
+      const sessionData = await fetchWithCache<{ session: { records: any[] } }>(`/api/sessions?classId=${classId}`);
       if (sessionData.session?.records) {
         setStudents(sessionData.session.records);
       }

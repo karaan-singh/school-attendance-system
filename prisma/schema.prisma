@@ -78,6 +78,7 @@ model ClassEnrollment {
   updatedAt DateTime    @updatedAt
 
   @@unique([studentId, classId])
+  @@index([classId])
 }
 
 enum AttendanceStatus {
@@ -107,6 +108,8 @@ model AttendanceSession {
   updatedAt     DateTime           @updatedAt
 
   @@unique([classId, date])
+  @@index([classId])
+  @@index([date])
 }
 
 model AttendanceRecord {
@@ -123,6 +126,7 @@ model AttendanceRecord {
   updatedAt   DateTime          @updatedAt
 
   @@unique([sessionId, studentId])
+  @@index([studentId])
 }
 
 model AuditLog {
@@ -131,11 +135,14 @@ model AuditLog {
   session     AttendanceSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   recordId    String?
   record      AttendanceRecord?  @relation(fields: [recordId], references: [id], onDelete: SetNull)
-  actor       String             @default("Teacher")
+  actor       String             // e.g. "Teacher"
   action      String             // e.g. "STATUS_CHANGE", "BULK_PRESENT", "SESSION_FINALIZED"
   oldValue    String?
   newValue    String?
   timestamp   DateTime           @default(now())
+
+  @@index([sessionId])
+  @@index([recordId])
 }
 
 model ForestProgress {

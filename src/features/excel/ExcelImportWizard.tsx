@@ -10,6 +10,7 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react';
+import { invalidateCache } from '@/lib/apiCache';
 
 interface ExcelImportWizardProps {
   classes: Array<{ id: string; name: string; code: string }>;
@@ -83,6 +84,8 @@ export default function ExcelImportWizard({
       setResultMessage(data.message || 'Students imported successfully!');
       setPreviewData(null);
       setSelectedFile(null);
+      invalidateCache('/api/classes');
+      invalidateCache('/api/sessions');
       if (onImportComplete) onImportComplete();
     } catch (err: any) {
       setErrorMessage(err.message);

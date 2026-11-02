@@ -55,6 +55,10 @@ module.exports = {
         sans: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
         display: ["Georgia", "serif"],
       },
+      boxShadow: {
+        '2xs': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+      },
       keyframes: {
         float: {
           "0%, 100%": { transform: "translateY(0px)" },

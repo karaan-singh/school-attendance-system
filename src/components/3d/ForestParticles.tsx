@@ -3,6 +3,7 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { getDeviceTier } from '@/lib/deviceTier';
 
 interface ForestParticlesProps {
   count?: number;
@@ -15,39 +16,31 @@ export default function ForestParticles({
 }: ForestParticlesProps) {
   const pointsRef = useRef<THREE.Points>(null);
 
-  const [positions, scales] = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    const scl = new Float32Array(count);
+  // Adapt particle density for weak processors and low-RAM devices
+  const effectiveCount = useMemo(() => {
+    const tier = getDeviceTier();
+    return tier.isLowEnd ? Math.min(count, 30) : count;
+  }, [count]);
 
-    for (let i = 0; i < count; i++) {
+  const [positions] = useMemo(() => {
+    const pos = new Float32Array(effectiveCount * 3);
+
+    for (let i = 0; i < effectiveCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const radius = Math.random() * areaRadius;
       pos[i * 3] = Math.cos(angle) * radius;
       pos[i * 3 + 1] = 0.5 + Math.random() * 6.5; // height above ground
       pos[i * 3 + 2] = Math.sin(angle) * radius;
-
-      scl[i] = 0.8 + Math.random() * 1.4;
     }
-    return [pos, scl];
-  }, [count, areaRadius]);
+    return [pos];
+  }, [effectiveCount, areaRadius]);
 
+  // Hardware-accelerated transformation instead of expensive CPU BufferAttribute reallocation
   useFrame(({ clock }) => {
     if (!pointsRef.current) return;
     const time = clock.getElapsedTime();
-    const positionAttr = pointsRef.current.geometry.attributes.position as THREE.BufferAttribute;
-    const array = positionAttr.array as Float32Array;
-
-    for (let i = 0; i < count; i++) {
-      const idx = i * 3;
-      // Gentle floating bob & drift
-      array[idx + 1] += Math.sin(time * 1.5 + i) * 0.008;
-      array[idx] += Math.cos(time * 0.8 + i) * 0.004;
-
-      // Keep within bounds
-      if (array[idx + 1] > 8) array[idx + 1] = 1;
-      if (array[idx + 1] < 0.5) array[idx + 1] = 7;
-    }
-    positionAttr.needsUpdate = true;
+    pointsRef.current.rotation.y = time * 0.04;
+    pointsRef.current.position.y = Math.sin(time * 0.8) * 0.12;
   });
 
   return (
@@ -64,6 +57,7 @@ export default function ForestParticles({
         transparent
         opacity={0.75}
         blending={THREE.AdditiveBlending}
+        depthWrite={false}
       />
     </points>
   );

@@ -42,9 +42,11 @@ export default function AttendanceRosterTable({
 }: AttendanceRosterTableProps) {
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
+      const nameStr = s.fullName || (s as any).name || '';
+      const rollStr = s.rollNumber || '';
       const matchesSearch =
-        s.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.rollNumber.toLowerCase().includes(searchQuery.toLowerCase());
+        nameStr.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rollStr.toLowerCase().includes(searchQuery.toLowerCase());
 
       if (!matchesSearch) return false;
 
@@ -161,7 +163,7 @@ export default function AttendanceRosterTable({
       </div>
 
       {/* Roster Table */}
-      <div className="max-h-[460px] overflow-y-auto rounded-2xl border border-slate-200 shadow-2xs">
+      <div className="max-h-[460px] overflow-y-auto rounded-2xl border border-slate-200 shadow-2xs content-auto">
         <table className="w-full text-left text-xs">
           <thead className="sticky top-0 z-10 bg-blue-50 text-[11px] font-bold uppercase tracking-wider text-blue-900 shadow-2xs">
             <tr>

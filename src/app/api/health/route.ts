@@ -8,16 +8,23 @@ export async function GET() {
     const classCount = await prisma.schoolClass.count();
     const studentCount = await prisma.student.count();
 
-    return NextResponse.json({
-      status: 'healthy',
-      database: 'connected',
-      engine: 'MySQL (XAMPP)',
-      stats: {
-        classes: classCount,
-        students: studentCount,
+    return NextResponse.json(
+      {
+        status: 'healthy',
+        database: 'connected',
+        engine: 'MySQL (XAMPP)',
+        stats: {
+          classes: classCount,
+          students: studentCount,
+        },
+        timestamp: new Date().toISOString(),
       },
-      timestamp: new Date().toISOString(),
-    });
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Health check failed:', error);
     return NextResponse.json(

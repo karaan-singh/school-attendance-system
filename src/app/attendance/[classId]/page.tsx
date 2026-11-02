@@ -2,21 +2,49 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAttendanceStore } from '@/store/useAttendanceStore';
 import { useGameStore } from '@/store/useGameStore';
-import CanvasContainer from '@/components/3d/CanvasContainer';
-import JourneyPath from '@/components/3d/JourneyPath';
-import TempleNightJourneyScene from '@/components/3d/TempleNightJourneyScene';
-import StudentForest from '@/components/3d/StudentForest';
-import CelebrationFX from '@/components/3d/CelebrationFX';
-import CampingCelebrationCinematic from '@/components/3d/CampingCelebrationCinematic';
 import AttendanceRosterTable from '@/features/attendance/AttendanceRosterTable';
-import StudentCheckInModal from '@/features/attendance/StudentCheckInModal';
-import SessionReviewModal from '@/features/attendance/SessionReviewModal';
-import FinalCelebrationModal from '@/features/attendance/FinalCelebrationModal';
-import StoryJournalModal from '@/features/story/StoryJournalModal';
-import WoodcutterStoryboardModal from '@/features/story/WoodcutterStoryboardModal';
 import { StudentRecord } from '@/types';
+import { fetchWithCache, getCachedData } from '@/lib/apiCache';
+
+const CanvasContainer = dynamic(() => import('@/components/3d/CanvasContainer'), {
+  ssr: false,
+});
+const TempleNightJourneyScene = dynamic(
+  () => import('@/components/3d/TempleNightJourneyScene'),
+  { ssr: false }
+);
+const StudentForest = dynamic(() => import('@/components/3d/StudentForest'), {
+  ssr: false,
+});
+const CelebrationFX = dynamic(() => import('@/components/3d/CelebrationFX'), {
+  ssr: false,
+});
+const CampingCelebrationCinematic = dynamic(
+  () => import('@/components/3d/CampingCelebrationCinematic'),
+  { ssr: false }
+);
+const StudentCheckInModal = dynamic(
+  () => import('@/features/attendance/StudentCheckInModal'),
+  { ssr: false }
+);
+const SessionReviewModal = dynamic(
+  () => import('@/features/attendance/SessionReviewModal'),
+  { ssr: false }
+);
+const FinalCelebrationModal = dynamic(
+  () => import('@/features/attendance/FinalCelebrationModal'),
+  { ssr: false }
+);
+const StoryJournalModal = dynamic(() => import('@/features/story/StoryJournalModal'), {
+  ssr: false,
+});
+const WoodcutterStoryboardModal = dynamic(
+  () => import('@/features/story/WoodcutterStoryboardModal'),
+  { ssr: false }
+);
 import {
   FastForward,
   Table,
@@ -79,14 +107,23 @@ export default function AttendanceStoryPage() {
   const [cameraPreset, setCameraPreset] = useState<'grove' | 'waterfall' | 'ridge'>('grove');
   const cinematicAnimFrameRef = useRef<number | null>(null);
 
-  // Load session from server
+  // Load session from server with 0ms cached instant hydration
   useEffect(() => {
     if (!classId) return;
 
-    fetch(`/api/sessions?classId=${classId}`)
-      .then((res) => res.json())
+    const cached = getCachedData<{ session: any }>(`/api/sessions?classId=${classId}`);
+    if (cached?.session) {
+      setSession(cached.session);
+      if (cached.session.status === 'FINALIZED') {
+        setChapter('CHAPTER_5_CELEBRATION');
+      } else if (currentChapter === 'CHAPTER_1_VILLAGE') {
+        setChapter('CHAPTER_2_JOURNEY');
+      }
+    }
+
+    fetchWithCache<{ session: any }>(`/api/sessions?classId=${classId}`)
       .then((data) => {
-        if (data.session) {
+        if (data?.session) {
           setSession(data.session);
           if (data.session.status === 'FINALIZED') {
             setChapter('CHAPTER_5_CELEBRATION');
@@ -97,6 +134,15 @@ export default function AttendanceStoryPage() {
       })
       .catch((err) => console.error('Failed to load session:', err));
   }, [classId, setSession, setChapter]);
+
+  // Clean up any running animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (cinematicAnimFrameRef.current) {
+        cancelAnimationFrame(cinematicAnimFrameRef.current);
+      }
+    };
+  }, []);
 
   // Handle Journey Complete
   const handleJourneyComplete = () => {

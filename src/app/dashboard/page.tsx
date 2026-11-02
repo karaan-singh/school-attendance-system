@@ -13,16 +13,18 @@ import {
   Award,
 } from 'lucide-react';
 import { SchoolClassData } from '@/types';
+import { fetchWithCache, getCachedData } from '@/lib/apiCache';
 
 export default function DashboardPage() {
-  const [classes, setClasses] = useState<SchoolClassData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [classes, setClasses] = useState<SchoolClassData[]>(() => {
+    return getCachedData<{ classes: SchoolClassData[] }>('/api/classes')?.classes || [];
+  });
+  const [isLoading, setIsLoading] = useState(classes.length === 0);
 
   useEffect(() => {
-    fetch('/api/classes')
-      .then((res) => res.json())
+    fetchWithCache<{ classes: SchoolClassData[] }>('/api/classes')
       .then((data) => {
-        if (data.classes) setClasses(data.classes);
+        if (data?.classes) setClasses(data.classes);
       })
       .catch((err) => console.error(err))
       .finally(() => setIsLoading(false));
@@ -132,8 +134,23 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {classes.map((cls) => {
-            const isFinalized = cls.todaySessionStatus === 'FINALIZED';
+          {classes.length === 0 ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex flex-col justify-between rounded-3xl border border-blue-100 bg-white p-6 shadow-sm animate-pulse h-48"
+              >
+                <div>
+                  <div className="h-4 w-14 bg-blue-100/60 rounded" />
+                  <div className="mt-3 h-5 w-40 bg-slate-200/60 rounded" />
+                  <div className="mt-2 h-3 w-48 bg-slate-100 rounded" />
+                </div>
+                <div className="mt-6 h-8 w-full bg-slate-100 rounded-xl" />
+              </div>
+            ))
+          ) : (
+            classes.map((cls) => {
+              const isFinalized = cls.todaySessionStatus === 'FINALIZED';
             const isDraft = cls.todaySessionStatus === 'DRAFT';
             const progress = cls.progress;
 
@@ -217,7 +234,8 @@ export default function DashboardPage() {
                 </div>
               </div>
             );
-          })}
+          })
+        )}
         </div>
       </div>
     </div>

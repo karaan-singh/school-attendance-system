@@ -24,10 +24,25 @@ export default function Navbar() {
   const [dbHealthy, setDbHealthy] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch('/api/health')
-      .then((res) => setDbHealthy(res.ok))
-      .catch(() => setDbHealthy(false));
-  }, [pathname]);
+    let isMounted = true;
+    const checkHealth = () => {
+      fetch('/api/health')
+        .then((res) => {
+          if (isMounted) setDbHealthy(res.ok);
+        })
+        .catch(() => {
+          if (isMounted) setDbHealthy(false);
+        });
+    };
+
+    checkHealth();
+    // Poll every 60s instead of hammering the server on every route change
+    const interval = setInterval(checkHealth, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleAudioToggle = () => {
     toggleSound();
@@ -71,10 +86,12 @@ export default function Navbar() {
         <nav className="hidden items-center gap-1.5 md:flex">
           {navLinks.map(({ href, label, icon: Icon }) => {
             const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
+            const isHeavy3d = href === '/village';
             return (
               <Link
                 key={href}
                 href={href}
+                prefetch={!isHeavy3d}
                 className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                   isActive
                     ? 'bg-blue-50 text-blue-700 shadow-xs ring-1 ring-blue-200'

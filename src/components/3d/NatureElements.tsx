@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { getDeviceTier } from '@/lib/deviceTier';
 
 // 1. Circling Birds in the Upper Sky
 export function FlyingBirds({ count = 6, height = 35, radius = 40 }: { count?: number; height?: number; radius?: number }) {
   const birdsGroupRef = useRef<THREE.Group>(null);
+  const tier = useMemo(() => getDeviceTier(), []);
 
   useFrame(({ clock }) => {
     if (!birdsGroupRef.current) return;
@@ -15,20 +17,21 @@ export function FlyingBirds({ count = 6, height = 35, radius = 40 }: { count?: n
   });
 
   const birdPositions = useMemo(() => {
-    return Array.from({ length: count }).map((_, i) => {
-      const angle = (i / count) * Math.PI * 2;
+    const effectiveCount = tier.isLowEnd ? Math.min(count, 3) : count;
+    return Array.from({ length: effectiveCount }).map((_, i) => {
+      const angle = (i / effectiveCount) * Math.PI * 2;
       const r = radius + (Math.sin(i * 1.7) * 8);
       const h = height + Math.cos(i * 2.3) * 4;
       return [Math.cos(angle) * r, h, Math.sin(angle) * r] as [number, number, number];
     });
-  }, [count, height, radius]);
+  }, [count, height, radius, tier.isLowEnd]);
 
   return (
     <group ref={birdsGroupRef}>
       {birdPositions.map((pos, idx) => (
         <group key={idx} position={pos} rotation={[0, -Math.PI / 2 + idx, 0]}>
           {/* Simple low-poly bird V-wing */}
-          <mesh castShadow>
+          <mesh castShadow={tier.enableHeavyEffects}>
             <coneGeometry args={[0.2, 0.7, 4]} />
             <meshStandardMaterial color="#1e293b" roughness={0.9} />
           </mesh>
@@ -46,39 +49,75 @@ export function FlyingBirds({ count = 6, height = 35, radius = 40 }: { count?: n
   );
 }
 
-// 2. Natural Meadow Wildflowers (Daisies, Buttercups, Poppies)
+// 2. Natural Meadow Wildflowers (Daisies, Buttercups, Poppies) - Batched with InstancedMesh (2 draw calls vs 180)
 export function WildflowerField({ count = 90, spread = 45 }: { count?: number; spread?: number }) {
-  const flowers = useMemo(() => {
+  const tier = useMemo(() => getDeviceTier(), []);
+  const effectiveCount = tier.isLowEnd ? Math.min(count, 42) : count;
+
+  const stemMeshRef = useRef<THREE.InstancedMesh>(null);
+  const headMeshRef = useRef<THREE.InstancedMesh>(null);
+
+  const flowerData = useMemo(() => {
     const list = [];
-    const colors = ['#f8fafc', '#fef08a', '#f43f5e', '#a855f7', '#fb923c'];
-    for (let i = 0; i < count; i++) {
+    const hexColors = ['#f8fafc', '#fef08a', '#f43f5e', '#a855f7', '#fb923c'];
+    for (let i = 0; i < effectiveCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const dist = 5 + Math.random() * spread;
       const x = Math.cos(angle) * dist;
       const z = Math.sin(angle) * dist;
-      const color = colors[i % colors.length];
+      const color = new THREE.Color(hexColors[i % hexColors.length]);
       const scale = 0.6 + Math.random() * 0.7;
       list.push({ x, z, color, scale });
     }
     return list;
-  }, [count, spread]);
+  }, [effectiveCount, spread]);
+
+  useEffect(() => {
+    if (!stemMeshRef.current || !headMeshRef.current) return;
+    const dummy = new THREE.Object3D();
+
+    flowerData.forEach((f, i) => {
+      // 1. Stem instanced matrix
+      dummy.position.set(f.x, 0.15 + 0.12 * f.scale, f.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(f.scale, f.scale, f.scale);
+      dummy.updateMatrix();
+      stemMeshRef.current!.setMatrixAt(i, dummy.matrix);
+
+      // 2. Petal Head instanced matrix & individual color
+      dummy.position.set(f.x, 0.15 + 0.25 * f.scale, f.z);
+      dummy.rotation.set(0.2, (i * 0.7) % Math.PI, 0);
+      dummy.scale.set(f.scale, f.scale, f.scale);
+      dummy.updateMatrix();
+      headMeshRef.current!.setMatrixAt(i, dummy.matrix);
+      headMeshRef.current!.setColorAt(i, f.color);
+    });
+
+    stemMeshRef.current.instanceMatrix.needsUpdate = true;
+    headMeshRef.current.instanceMatrix.needsUpdate = true;
+    if (headMeshRef.current.instanceColor) {
+      headMeshRef.current.instanceColor.needsUpdate = true;
+    }
+  }, [flowerData]);
 
   return (
     <group>
-      {flowers.map((f, i) => (
-        <group key={i} position={[f.x, 0.15, f.z]} scale={[f.scale, f.scale, f.scale]}>
-          {/* Stem */}
-          <mesh position={[0, 0.12, 0]}>
-            <cylinderGeometry args={[0.015, 0.02, 0.25, 4]} />
-            <meshStandardMaterial color="#3f6212" roughness={0.9} />
-          </mesh>
-          {/* Petal Head */}
-          <mesh position={[0, 0.25, 0]} rotation={[0.2, 0, 0]}>
-            <dodecahedronGeometry args={[0.08, 0]} />
-            <meshStandardMaterial color={f.color} roughness={0.7} />
-          </mesh>
-        </group>
-      ))}
+      <instancedMesh
+        ref={stemMeshRef}
+        args={[undefined, undefined, effectiveCount]}
+        frustumCulled={false}
+      >
+        <cylinderGeometry args={[0.015, 0.02, 0.25, 4]} />
+        <meshStandardMaterial color="#3f6212" roughness={0.9} />
+      </instancedMesh>
+      <instancedMesh
+        ref={headMeshRef}
+        args={[undefined, undefined, effectiveCount]}
+        frustumCulled={false}
+      >
+        <dodecahedronGeometry args={[0.08, 0]} />
+        <meshStandardMaterial roughness={0.7} />
+      </instancedMesh>
     </group>
   );
 }
@@ -201,9 +240,11 @@ export function DirectionalSignpost({ position = [2.2, 0, 2.5] }: { position?: [
 
 // 6. Forest Floor Glow Mushrooms
 export function ForestMushrooms({ count = 16, radius = 25 }: { count?: number; radius?: number }) {
+  const tier = useMemo(() => getDeviceTier(), []);
   const mushrooms = useMemo(() => {
-    return Array.from({ length: count }).map((_, i) => {
-      const a = (i / count) * Math.PI * 2 + Math.sin(i) * 0.4;
+    const effectiveCount = tier.isLowEnd ? Math.min(count, 8) : count;
+    return Array.from({ length: effectiveCount }).map((_, i) => {
+      const a = (i / effectiveCount) * Math.PI * 2 + Math.sin(i) * 0.4;
       const r = 8 + (i % 4) * 4;
       return {
         x: Math.cos(a) * r,
@@ -212,7 +253,7 @@ export function ForestMushrooms({ count = 16, radius = 25 }: { count?: number; r
         color: i % 2 === 0 ? '#38bdf8' : '#fb923c', // Bioluminescent cyan and amber
       };
     });
-  }, [count, radius]);
+  }, [count, radius, tier.isLowEnd]);
 
   return (
     <group>

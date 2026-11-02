@@ -555,30 +555,22 @@ function texLeaf() {
   return c;
 }
 
-/* the night sky itself: black at altitude, going to the fog colour at the
-   horizon so the backdrop and the depth cue meet without a seam */
+/* Sunlit morning sky: vibrant alpine blue fading into warm horizon glow */
 function texSky() {
   const W = 512, H = 512, c = cvs(W, H), x = c.getContext('2d');
   const g = x.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, 'rgb(6,10,15)');    g.addColorStop(.34, 'rgb(13,22,31)');
-  g.addColorStop(.66, 'rgb(17,26,34)'); g.addColorStop(.88, 'rgb(24,35,42)');
-  g.addColorStop(1, 'rgb(14,22,28)');
+  g.addColorStop(0, 'rgb(37,99,235)');    g.addColorStop(.34, 'rgb(96,165,250)');
+  g.addColorStop(.66, 'rgb(147,197,253)'); g.addColorStop(.88, 'rgb(191,219,254)');
+  g.addColorStop(1, 'rgb(224,242,254)');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
-  /* cloud, and a low warm bloom off the valley behind the ridge */
-  x.globalAlpha = .34; x.globalCompositeOperation = 'overlay';
+  /* soft daylight cloud layer */
+  x.globalAlpha = .40; x.globalCompositeOperation = 'screen';
   x.drawImage(fbmCanvas(W, H, 313, 5, 3, .9), 0, 0);
   x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-  const wg = x.createRadialGradient(W * .68, H * .95, 4, W * .68, H * .95, W * .44);
-  wg.addColorStop(0, 'rgba(150,66,26,.30)'); wg.addColorStop(.5, 'rgba(96,44,22,.12)');
-  wg.addColorStop(1, 'rgba(0,0,0,0)');
+  const wg = x.createRadialGradient(W * .68, H * .22, 10, W * .68, H * .22, W * .48);
+  wg.addColorStop(0, 'rgba(254,240,138,.55)'); wg.addColorStop(.5, 'rgba(253,224,71,.18)');
+  wg.addColorStop(1, 'rgba(255,255,255,0)');
   x.fillStyle = wg; x.fillRect(0, 0, W, H);
-  /* a scatter of stars, faint enough to survive the bloom */
-  const rnd = mulberry32(881);
-  for (let i = 0; i < 420; i++) {
-    const sx = rnd() * W, sy = rnd() * H * .78, r = .5 + rnd() * rnd() * 1.7;
-    x.fillStyle = 'rgba(214,232,240,' + (.12 + rnd() * .42) * (1 - sy / H) + ')';
-    x.beginPath(); x.arc(sx, sy, r, 0, TAU); x.fill();
-  }
   return c;
 }
 
@@ -594,9 +586,9 @@ function texRidge() {
     x.lineTo(i, H - ridge * H * .84);
   }
   x.lineTo(W, H); x.closePath();
-  x.fillStyle = '#050809'; x.fill();
+  x.fillStyle = '#1e3a2f'; x.fill();
   /* conifer spikes along the crest so the silhouette reads as forest */
-  x.fillStyle = '#050809';
+  x.fillStyle = '#1e3a2f';
   for (let i = 0; i < 460; i++) {
     const px = rnd() * W, t = px / W;
     const ridge = .46 + .30 * (fbm(n, t * 2.4, .5, 4, 2.1, .55) * .5 + .5)
@@ -669,137 +661,27 @@ function texRoof() {
    near-neutral albedo and the colour is applied once, on the material. */
 function texMoon() {
   const S = 512, c = cvs(S, S), x = c.getContext('2d');
-  const R = S / 2 - 1, rnd = mulberry32(91);
-  const px = (u, v) => [S / 2 + u * R, S / 2 + v * R];        /* disc coords */
-
+  const R = S / 2 - 2;
   x.beginPath(); x.arc(S / 2, S / 2, R, 0, TAU); x.closePath();
   x.save(); x.clip();
-
-  /* highland base. The reference disc is very slightly brighter at the limb,
-     not darker — during totality the rim keeps its forward scatter — so this
-     ramp opens outward instead of falling off. */
-  const g = x.createRadialGradient(S * .46, S * .44, S * .05, S / 2, S / 2, R);
-  g.addColorStop(0, 'rgb(150,150,150)'); g.addColorStop(.55, 'rgb(158,158,158)');
-  g.addColorStop(.86, 'rgb(178,178,178)'); g.addColorStop(1, 'rgb(196,196,196)');
+  const g = x.createRadialGradient(S * .5, S * .5, 0, S / 2, S / 2, R);
+  g.addColorStop(0, 'rgb(255,255,255)');
+  g.addColorStop(.35, 'rgb(254,249,195)');
+  g.addColorStop(.72, 'rgb(253,224,71)');
+  g.addColorStop(1, 'rgb(251,191,36)');
   x.fillStyle = g; x.fillRect(0, 0, S, S);
-
-  /* fine highland mottle */
-  x.globalCompositeOperation = 'overlay'; x.globalAlpha = .5;
-  x.drawImage(fbmCanvas(256, 256, 517, 6, 4, 1.1), 0, 0, S, S);
-  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-
-  /* --- 1 · the maria, at their near-side places (u right, v down) --------- */
-  const seas = [
-    [-.52, -.06, .46, .80],   /* Oceanus Procellarum */
-    [-.26, -.38, .31, .92],   /* Imbrium             */
-    [ .13, -.31, .20, .88],   /* Serenitatis         */
-    [ .30, -.08, .23, .84],   /* Tranquillitatis     */
-    [ .45,  .12, .15, .78],   /* Fecunditatis        */
-    [ .27,  .27, .12, .74],   /* Nectaris            */
-    [ .57, -.30, .12, .95],   /* Crisium, the one that stands on its own */
-    [-.27,  .30, .19, .70],   /* Nubium              */
-    [-.47,  .25, .13, .72],   /* Humorum             */
-  ];
-  const sea = cvs(S, S), sx = sea.getContext('2d');
-  seas.forEach(([u, v, rad, dk]) => {
-    /* a basin is a cluster of lobes, never a circle */
-    for (let i = 0; i < 22; i++) {
-      const a = rnd() * TAU, off = rnd() * rad * .66;
-      const [bx, by] = px(u + Math.cos(a) * off, v + Math.sin(a) * off * .8);
-      const rr = rad * R * (.30 + rnd() * .46);
-      const bg = sx.createRadialGradient(bx, by, rr * .2, bx, by, rr);
-      bg.addColorStop(0, 'rgba(0,0,0,' + (dk * .14).toFixed(3) + ')');
-      bg.addColorStop(1, 'rgba(0,0,0,0)');
-      sx.fillStyle = bg; sx.beginPath(); sx.arc(bx, by, rr, 0, TAU); sx.fill();
-    }
-  });
-  /* a sea is dark, not black: the real mare/highland contrast is about 4:3,
-     and anything heavier turns the disc into a skull */
-  x.save(); x.filter = 'blur(9px)'; x.globalAlpha = .90;
-  x.drawImage(sea, 0, 0); x.restore();
-  /* mottle riding on top of the basins so their floors are not flat washes */
-  x.globalCompositeOperation = 'overlay'; x.globalAlpha = .18;
-  x.drawImage(fbmCanvas(256, 256, 811, 4, 11, 1.2), 0, 0, S, S);
-  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-
-  /* --- 2 · ray systems, thrown clear across the disc ---------------------- */
-  const ray = cvs(S, S), rx2 = ray.getContext('2d');
-  [[-.10, .54, 150, 1], [-.28, -.07, 80, .6], [-.46, -.04, 60, .45]].forEach(([u, v, n, str]) => {
-    const [ox, oy] = px(u, v);
-    for (let i = 0; i < n; i++) {
-      const a = rnd() * TAU, len = R * (.30 + rnd() * rnd() * 1.3);
-      /* start clear of the crater — rays converging on a point read as a
-         lens flare, and the real ones begin outside the ejecta blanket */
-      const t0 = R * (.08 + rnd() * .06);
-      const p0 = [ox + Math.cos(a) * t0, oy + Math.sin(a) * t0];
-      const p1 = [ox + Math.cos(a) * len, oy + Math.sin(a) * len];
-      const rg = rx2.createLinearGradient(p0[0], p0[1], p1[0], p1[1]);
-      rg.addColorStop(0, 'rgba(255,255,255,' + (.085 * str).toFixed(3) + ')');
-      rg.addColorStop(.4, 'rgba(255,255,255,' + (.055 * str).toFixed(3) + ')');
-      rg.addColorStop(1, 'rgba(255,255,255,0)');
-      rx2.strokeStyle = rg; rx2.lineWidth = .8 + rnd() * 2.4; rx2.lineCap = 'round';
-      rx2.beginPath(); rx2.moveTo(p0[0], p0[1]);
-      rx2.quadraticCurveTo(ox + Math.cos(a + .06) * len * .55, oy + Math.sin(a + .06) * len * .55,
-                           p1[0], p1[1]);
-      rx2.stroke();
-    }
-  });
-  x.save(); x.filter = 'blur(2.4px)'; x.globalCompositeOperation = 'lighter';
-  x.globalAlpha = .62; x.drawImage(ray, 0, 0); x.restore();
-
-  /* --- 3 · the crater field ----------------------------------------------
-     A crater is not a ring. Stroked with a gradient running across it, the
-     same circle gives a rim lit on the sun side and thrown into shadow on the
-     other — which is the read — where a radial ring gives a bubble. */
-  const inSea = (u, v) => seas.some(([su, sv, rad]) =>
-    Math.hypot(u - su, (v - sv) * 1.15) < rad * .82);
-  for (let i = 0; i < 620; i++) {
-    const a = rnd() * TAU, rr = Math.sqrt(rnd()) * .97;
-    const u = Math.cos(a) * rr, v = Math.sin(a) * rr;
-    /* the seas are young and nearly unmarked — that contrast is the point */
-    if (inSea(u, v) && rnd() > .12) continue;
-    const [cx2, cy] = px(u, v);
-    const big = rnd() > .975;
-    const r = (1 + rnd() * rnd() * rnd() * (big ? 34 : 11)) * (S / 512);
-    const fade = .55 + .45 * Math.sqrt(Math.max(0, 1 - rr * rr));   /* limb falloff */
-    /* foreshortened toward the limb, like anything on a sphere */
-    const sq = Math.sqrt(Math.max(0, 1 - rr * rr)) * .72 + .28;
-    x.save(); x.translate(cx2, cy); x.rotate(Math.atan2(v, u)); x.scale(sq, 1);
-    x.rotate(-Math.atan2(v, u));                       /* keep the sun direction */
-    const rimW = Math.max(.8, r * .26);
-    const lg = x.createLinearGradient(-r, -r, r, r);   /* sun sits up-left */
-    lg.addColorStop(0, 'rgba(255,255,255,' + (.34 * fade).toFixed(3) + ')');
-    lg.addColorStop(.5, 'rgba(255,255,255,0)');
-    lg.addColorStop(1, 'rgba(0,0,0,' + (.38 * fade).toFixed(3) + ')');
-    x.strokeStyle = lg; x.lineWidth = rimW;
-    x.beginPath(); x.arc(0, 0, Math.max(.6, r - rimW * .5), 0, TAU); x.stroke();
-    if (r > 3) {                                        /* the floor it encloses */
-      const fg = x.createLinearGradient(-r, -r, r, r);
-      fg.addColorStop(0, 'rgba(0,0,0,' + (.21 * fade).toFixed(3) + ')');
-      fg.addColorStop(1, 'rgba(255,255,255,' + (.07 * fade).toFixed(3) + ')');
-      x.fillStyle = fg; x.beginPath(); x.arc(0, 0, r - rimW, 0, TAU); x.fill();
-    }
-    if (r > 13) {                                       /* central peak */
-      x.fillStyle = 'rgba(255,255,255,' + (.14 * fade).toFixed(3) + ')';
-      x.beginPath(); x.arc(-r * .04, -r * .04, r * .11, 0, TAU); x.fill();
-    }
-    x.restore();
+  x.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 24; i++) {
+    const angle = (i / 24) * TAU;
+    x.beginPath();
+    x.moveTo(S / 2, S / 2);
+    x.lineTo(S / 2 + Math.cos(angle) * R * 1.25, S / 2 + Math.sin(angle) * R * 1.25);
+    x.strokeStyle = 'rgba(255,255,255,0.22)';
+    x.lineWidth = 12;
+    x.stroke();
   }
-
-  /* surface tooth: genuinely fine, or it just adds another layer of cloud
-     and the basins disappear under it */
-  x.globalCompositeOperation = 'overlay'; x.globalAlpha = .13;
-  x.drawImage(fbmCanvas(S, S, 977, 2, 210, 1.3), 0, 0, S, S);
-  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-
-  /* the terminator side: the disc is not lit dead-on */
-  const sh = x.createRadialGradient(S * .40, S * .38, S * .18, S * .52, S * .56, S * .72);
-  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.30)');
-  x.fillStyle = sh; x.fillRect(0, 0, S, S);
   x.restore();
-
-  /* a one-pixel feather on the limb so it is a moon in air, not a cut disc */
-  const fe = x.createRadialGradient(S / 2, S / 2, R - 2.5, S / 2, S / 2, R);
+  const fe = x.createRadialGradient(S / 2, S / 2, R - 6, S / 2, S / 2, R);
   fe.addColorStop(0, 'rgba(0,0,0,1)'); fe.addColorStop(1, 'rgba(0,0,0,0)');
   x.globalCompositeOperation = 'destination-in';
   x.fillStyle = fe; x.fillRect(0, 0, S, S);
@@ -807,7 +689,6 @@ function texMoon() {
   return c;
 }
 
-/* soft round falloff — haze, embers, glows */
 function texGlow(inner, mid) {
   const S = 256, c = cvs(S, S), x = c.getContext('2d');
   const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
@@ -1079,19 +960,14 @@ function initGL() {
   renderer.setSize(vpW(), vpH(), true);
   renderer.outputEncoding = WANT_POST ? THREE.LinearEncoding : THREE.sRGBEncoding;
   renderer.toneMapping = WANT_POST ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
-  renderer.setClearColor(0x05070a, 1);
+  renderer.toneMappingExposure = 1.35;
+  renderer.setClearColor(0x93c5fd, 1);
   if (WANT_SHADOW) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
   maxAniso = renderer.capabilities.getMaxAnisotropy();
   scene = new THREE.Scene();
-    /* Density puts the hall back in the air; the colour is what decides how
-     dark it is back there. At this depth most of the building's pixel is
-     fog rather than its own material — darkening the timber and the tiles
-     moved the hall by 0.18 of a luminance unit, the fog colour moves it
-     properly. And it reaches by distance, so the foreground does not
-     follow it down. */
-  scene.fog = new THREE.FogExp2(0x050a0e, 0.0168);
-  scene.background = new THREE.Color(0x060a0d);
+  /* Crisp alpine daylight fog */
+  scene.fog = new THREE.FogExp2(0xdbeafe, 0.0075);
+  scene.background = new THREE.Color(0xa7d3fd);
   camera = new THREE.PerspectiveCamera(36, vpW() / vpH(), .35, 220);
   scene.add(camera);
 }
@@ -1509,15 +1385,16 @@ function buildMoon() {
        is decoded out of sRGB before this multiplies it, so the tint has to be
        written in linear, where the same look is ≈ .21. Reading the ratio
        straight off the reference is what left the moon a pale pink. */
-    new THREE.MeshBasicMaterial({ map: tx(texMoon()), color: hdr(3.6, .64, .61),
+    /* Brilliant golden morning sun disc */
+    new THREE.MeshBasicMaterial({ map: tx(texMoon()), color: hdr(4.2, 3.9, 3.1),
       transparent: true, depthWrite: false, fog: false, toneMapped: false }));
   disc.position.set(MOON.x, MOON.y, MOON.z); disc.renderOrder = 1;
   scene.add(disc); WORLD.moon = disc;
 
-  /* the air around it — a wide, weak corona that the bloom picks up */
-  const halo = new THREE.Mesh(new THREE.PlaneGeometry(MOON.r * 6.4, MOON.r * 6.4),
-    new THREE.MeshBasicMaterial({ map: tx(texGlow('rgba(255,124,112,.90)', 'rgba(206,52,48,.26)')),
-      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: .44 }));
+  /* Radiant golden solar corona */
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(MOON.r * 7.2, MOON.r * 7.2),
+    new THREE.MeshBasicMaterial({ map: tx(texGlow('rgba(255,248,220,.95)', 'rgba(254,215,170,.30)')),
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: .65 }));
   halo.position.set(MOON.x, MOON.y, MOON.z - .3); halo.renderOrder = 0;
   scene.add(halo); WORLD.moonHalo = halo;
 }
@@ -2119,9 +1996,9 @@ function updateWisps(dt) {
 }
 
 function buildLights() {
-  scene.add(new THREE.HemisphereLight(0x53838f, 0x060a08, .13));
+  scene.add(new THREE.HemisphereLight(0xbae6fd, 0x86efac, 0.85));
 
-  const key = new THREE.DirectionalLight(0xb6dbe4, 1.22);
+  const key = new THREE.DirectionalLight(0xfffbeb, 2.2);
   key.position.set(2.6, 21, 2.5);
   key.target.position.set(0, 2.2, -12.5); scene.add(key.target);
   if (WANT_SHADOW) {
@@ -2134,34 +2011,29 @@ function buildLights() {
   }
   scene.add(key); WORLD.key = key;
 
-  /* moonlight: no shadow, no fill, purely a rim down the right-hand slope of
-     every roof — without it the hall is a flat black cut-out against the sky */
-  const moonKey = new THREE.DirectionalLight(0xff6a42, .52);
+  /* Sunlight reflection along temple roof slopes */
+  const moonKey = new THREE.DirectionalLight(0xfef08a, 1.25);
   moonKey.position.set(26, 30, -60);
   moonKey.target.position.set(0, 8, -40); scene.add(moonKey.target);
   scene.add(moonKey);
 
-  /* The hall's own lamps. They light the podium and the top of the flight and
-     nothing else — a range that reaches the roof turns the whole building into
-     a paper lantern and the silhouette disappears. */
-  const hallL = new THREE.PointLight(0xff8a26, 2.3, 15, 2);
+  /* The hall's warm temple lanterns */
+  const hallL = new THREE.PointLight(0xf59e0b, 1.8, 16, 2);
   hallL.position.set(0, PODIUM + 1.2, TEMPLE_Z + 8.6); scene.add(hallL); WORLD.hallLight = hallL;
   [-1, 1].forEach(s => {
-    const w = new THREE.PointLight(0xff8420, 2.2, 11, 2);
+    const w = new THREE.PointLight(0xf59e0b, 1.6, 12, 2);
     w.position.set(s * 11.4, PODIUM + 1.2, TEMPLE_Z + 5.6); scene.add(w);
   });
 
-  /* the moon throws almost nothing, but a trace of red high on the right
-     keeps it attached to the scene instead of floating on top of it */
-  const moonL = new THREE.PointLight(0xff3a1c, 3.0, 46, 2);
+  /* Golden solar ambient fill */
+  const moonL = new THREE.PointLight(0xfef08a, 2.4, 48, 2);
   moonL.position.set(11.0, 17.0, -24.0); scene.add(moonL); WORLD.moonLight = moonL;
 
-  const fill = new THREE.PointLight(0x86c6d2, 0.95, 30, 2);
+  const fill = new THREE.PointLight(0x93c5fd, 1.1, 35, 2);
   fill.position.set(-1, 13.5, -16.0); scene.add(fill);
 
-  /* the flight is the spine of the composition — without a lamp of its own it
-     falls into the same black as the ground and the eye has nothing to climb */
-  const stairL = new THREE.PointLight(0xffa049, 4.2, 17, 2);
+  /* Sunlit stone staircase illumination */
+  const stairL = new THREE.PointLight(0xfed7aa, 2.6, 18, 2);
   stairL.position.set(0, 7.6, -26.0); scene.add(stairL);
 }
 /* ====================================================== 6 · planar mirror */
@@ -2214,8 +2086,8 @@ function initPost() {
   POST.comp = new THREE.ShaderMaterial({
     uniforms: {
       tS: { value: null }, tB: { value: null }, uRes: { value: new THREE.Vector2(w, h) },
-      uT: { value: 0 }, uBloom: { value: .34 }, uCA: { value: 1 }, uGrain: { value: .020 },
-      uVig: { value: 1 }, uExp: { value: .62 }, uFade: { value: 1 }, uSat: { value: 1.05 }
+      uT: { value: 0 }, uBloom: { value: .22 }, uCA: { value: .6 }, uGrain: { value: .008 },
+      uVig: { value: .65 }, uExp: { value: 1.15 }, uFade: { value: 1 }, uSat: { value: 1.08 }
     },
     vertexShader: QUAD_VS,
     fragmentShader:
@@ -2235,19 +2107,15 @@ function initPost() {
       ' c = aces(c);\n' +
       ' float l = dot(c, vec3(0.2126,0.7152,0.0722));\n' +
       ' c = mix(vec3(l), c, uSat);\n' +
-      ' c = mix(c, c*vec3(0.74,1.03,1.11), smoothstep(0.55,0.0,l)*0.80);\n' +    /* teal shadows */
-      ' c = mix(c, c*vec3(1.035,0.995,0.968), smoothstep(0.50,1.0,l)*0.26);\n' + /* warm highs   */
-      ' float v = smoothstep(1.22, 0.26, length(d*vec2(1.0,0.94))*1.42);\n' +
+      ' c = mix(c, c*vec3(0.92,0.98,1.06), smoothstep(0.45,0.0,l)*0.35);\n' +    /* soft daylight shadows */
+      ' c = mix(c, c*vec3(1.08,1.04,0.95), smoothstep(0.40,1.0,l)*0.32);\n' + /* warm daylight highs */
+      ' float v = smoothstep(1.35, 0.45, length(d*vec2(1.0,0.94))*1.25);\n' +
       ' c *= mix(1.0, v, uVig);\n' +
       ' float g = fract(sin(dot(vUv*uRes + uT*137.0, vec2(12.9898,78.233)))*43758.5453);\n' +
       ' c += (g-0.5)*uGrain;\n' +
       ' c *= uFade;\n' +
       ' vec3 e = pow(max(c,0.0), vec3(1.0/2.2));\n' +
-      /* A touch of contrast, applied after the encode rather than before it:
-         in linear the same curve mostly crushes the shadows, and this frame is
-         nearly all shadow. Pivoted low, at 0.30, so it deepens the night
-         without pulling the lit paper of the hall down with it. */
-      ' e = clamp((e - 0.30) * 1.00 + 0.30, 0.0, 1.0);\n' +
+      ' e = clamp(e, 0.0, 1.0);\n' +
       ' gl_FragColor = vec4( e, 1.0 );\n' +
       '}'
   });

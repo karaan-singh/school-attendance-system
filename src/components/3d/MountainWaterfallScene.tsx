@@ -4,6 +4,7 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { PinkWaterLily, WetlandCattail } from './StylizedBotanicals';
+import { getDeviceTier } from '@/lib/deviceTier';
 
 // =========================================================================
 // 1. MOSSY CRAG BOULDER (NATURAL FACETED FORM)
@@ -286,6 +287,8 @@ export function CascadingWaterfall({
   const ripplesTarnRef = useRef<THREE.Mesh>(null);
   const mistGroupRef = useRef<THREE.Group>(null);
   const splashGroupRef = useRef<THREE.Group>(null);
+  const frameCount = useRef(0);
+  const tier = useMemo(() => getDeviceTier(), []);
 
   const mountainDark = '#475569';     // Weathered mountain granite shadow (NO black lining)
   const mountainSlate = '#64748b';    // Sunlit slate rock
@@ -330,16 +333,17 @@ export function CascadingWaterfall({
   // Frame animations for realistic physical water flow, waves, splashes, and boiling foam
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
+    frameCount.current++;
+    const shouldUpdateVertexWaves = frameCount.current % (tier.isLowEnd ? 3 : 2) === 0;
 
     // 1. Dynamic physical vertex wave undulation for Upper Flume (cascading downward)
-    if (upperWaterRef.current) {
-      const geom = upperWaterRef.current.geometry;
-      const pos = geom.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const y = pos.getY(i);
-        const x = pos.getX(i);
-        const zWave = Math.sin(y * 3.2 - t * 16.0) * 0.09 + Math.cos(x * 3.0 + t * 10.0) * 0.04;
-        pos.setZ(i, zWave);
+    if (shouldUpdateVertexWaves && upperWaterRef.current) {
+      const pos = upperWaterRef.current.geometry.attributes.position;
+      const arr = pos.array as Float32Array;
+      for (let i = 0; i < arr.length; i += 3) {
+        const x = arr[i];
+        const y = arr[i + 1];
+        arr[i + 2] = Math.sin(y * 3.2 - t * 16.0) * 0.09 + Math.cos(x * 3.0 + t * 10.0) * 0.04;
       }
       pos.needsUpdate = true;
     }
@@ -358,14 +362,13 @@ export function CascadingWaterfall({
     }
 
     // 3. Dynamic physical vertex wave undulation for Lower Cascade (violent roaring torrent)
-    if (lowerWaterRef.current) {
-      const geom = lowerWaterRef.current.geometry;
-      const pos = geom.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const y = pos.getY(i);
-        const x = pos.getX(i);
-        const zWave = Math.sin(y * 3.5 - t * 20.0) * 0.14 + Math.cos(x * 3.6 + t * 12.0) * 0.06;
-        pos.setZ(i, zWave);
+    if (shouldUpdateVertexWaves && lowerWaterRef.current) {
+      const pos = lowerWaterRef.current.geometry.attributes.position;
+      const arr = pos.array as Float32Array;
+      for (let i = 0; i < arr.length; i += 3) {
+        const x = arr[i];
+        const y = arr[i + 1];
+        arr[i + 2] = Math.sin(y * 3.5 - t * 20.0) * 0.14 + Math.cos(x * 3.6 + t * 12.0) * 0.06;
       }
       pos.needsUpdate = true;
     }
@@ -667,7 +670,7 @@ export function CascadingWaterfall({
         rotation={[0.14, 0, 0]}
         castShadow
       >
-        <planeGeometry args={[14.5, 14.0, 24, 32]} />
+        <planeGeometry args={[14.5, 14.0, 16, 20]} />
         <meshStandardMaterial
           color={waterCyan}
           emissive={waterTurquoise}
@@ -682,7 +685,7 @@ export function CascadingWaterfall({
 
       {/* Upper Flume Aerated White-Water Torrent Streaks */}
       <mesh ref={upperFoamRef} position={[0, 12.2, 2.38]} rotation={[0.14, 0, 0]}>
-        <planeGeometry args={[13.5, 13.2, 20, 24]} />
+        <planeGeometry args={[13.5, 13.2, 14, 16]} />
         <meshStandardMaterial
           color={foamWhite}
           emissive="#ffffff"
@@ -730,7 +733,7 @@ export function CascadingWaterfall({
         rotation={[0.22, 0, 0]}
         castShadow
       >
-        <planeGeometry args={[22.5, 9.2, 36, 36]} />
+        <planeGeometry args={[22.5, 9.2, 20, 20]} />
         <meshStandardMaterial
           color={waterCyan}
           emissive={waterTurquoise}

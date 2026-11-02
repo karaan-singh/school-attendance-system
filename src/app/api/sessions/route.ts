@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!schoolClass) {
-      return NextResponse.json({ error: 'Class not found' }, { status: 404 });
+      throw new Error('Class not found in database, using fallback demo session');
     }
 
     // Find latest session for this class or create today's session
@@ -126,14 +126,14 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.warn('Database offline, returning fallback demo session:', error.message);
     const mockStudents = [
-      { id: 'std-1', rollNumber: '01', name: 'Aarav Sharma', avatarUrl: '', treeType: 'OAK', treeStage: 3, status: 'PRESENT', notes: '' },
-      { id: 'std-2', rollNumber: '02', name: 'Diya Patel', avatarUrl: '', treeType: 'BIRCH', treeStage: 2, status: 'PRESENT', notes: '' },
-      { id: 'std-3', rollNumber: '03', name: 'Rohan Gupta', avatarUrl: '', treeType: 'PINE', treeStage: 4, status: 'PRESENT', notes: '' },
-      { id: 'std-4', rollNumber: '04', name: 'Ananya Rao', avatarUrl: '', treeType: 'WILLOW', treeStage: 3, status: 'PRESENT', notes: '' },
-      { id: 'std-5', rollNumber: '05', name: 'Vivaan Singh', avatarUrl: '', treeType: 'OAK', treeStage: 2, status: 'ABSENT', notes: 'Fever' },
-      { id: 'std-6', rollNumber: '06', name: 'Isha Verma', avatarUrl: '', treeType: 'CHERRY', treeStage: 3, status: 'LATE', notes: '10m late' },
-      { id: 'std-7', rollNumber: '07', name: 'Kabir Mehta', avatarUrl: '', treeType: 'BIRCH', treeStage: 1, status: 'PRESENT', notes: '' },
-      { id: 'std-8', rollNumber: '08', name: 'Saanvi Nair', avatarUrl: '', treeType: 'PINE', treeStage: 3, status: 'PRESENT', notes: '' },
+      { id: 'std-1', rollNumber: '01', fullName: 'Aarav Sharma', gender: 'Male', avatarIcon: 'sprout-leaf', treeSpecies: 'Emerald Oak', status: 'PRESENT', note: '' },
+      { id: 'std-2', rollNumber: '02', fullName: 'Diya Patel', gender: 'Female', avatarIcon: 'cherry-blossom', treeSpecies: 'Cherry Blossom', status: 'PRESENT', note: '' },
+      { id: 'std-3', rollNumber: '03', fullName: 'Rohan Gupta', gender: 'Male', avatarIcon: 'pine-cone', treeSpecies: 'Silver Pine', status: 'PRESENT', note: '' },
+      { id: 'std-4', rollNumber: '04', fullName: 'Ananya Rao', gender: 'Female', avatarIcon: 'willow-branch', treeSpecies: 'Golden Willow', status: 'PRESENT', note: '' },
+      { id: 'std-5', rollNumber: '05', fullName: 'Vivaan Singh', gender: 'Male', avatarIcon: 'sprout-leaf', treeSpecies: 'Emerald Oak', status: 'ABSENT', note: 'Fever' },
+      { id: 'std-6', rollNumber: '06', fullName: 'Isha Verma', gender: 'Female', avatarIcon: 'cherry-blossom', treeSpecies: 'Cherry Blossom', status: 'LATE', note: '10m late' },
+      { id: 'std-7', rollNumber: '07', fullName: 'Kabir Mehta', gender: 'Male', avatarIcon: 'birch-bark', treeSpecies: 'Crimson Maple', status: 'PRESENT', note: '' },
+      { id: 'std-8', rollNumber: '08', fullName: 'Saanvi Nair', gender: 'Female', avatarIcon: 'pine-cone', treeSpecies: 'Silver Pine', status: 'PRESENT', note: '' },
     ];
     return NextResponse.json({
       session: {

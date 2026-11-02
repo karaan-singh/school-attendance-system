@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/layout/Navbar';
+import ServiceWorkerRegister from '@/components/layout/ServiceWorkerRegister';
+import RouteProgressBar from '@/components/layout/RouteProgressBar';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: 'Forest Quest — Story-Driven 3D School Attendance System',
@@ -17,6 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="light">
       <body className="min-h-screen bg-[#f8fafc] text-[#0f172a] antialiased selection:bg-blue-600 selection:text-white">
+        <Suspense fallback={null}>
+          <RouteProgressBar />
+        </Suspense>
+        <ServiceWorkerRegister />
         <Navbar />
         <main className="relative min-h-[calc(100vh-64px)] overflow-hidden">
           {children}

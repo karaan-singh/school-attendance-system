@@ -10,6 +10,21 @@ interface SkyAtmosphereProps {
   cinematicProgress?: number; // 0 (day/clearing) -> 0.5 (sunset in mountains) -> 1 (night camping celebration)
 }
 
+const COLOR_DAY_LIGHT = new THREE.Color('#fff7ed');
+const COLOR_DAY_AMBIENT = new THREE.Color('#e0f2fe');
+const COLOR_GOLDEN = new THREE.Color('#fbbf24');
+const COLOR_SUNSET_ROSE = new THREE.Color('#f43f5e');
+const COLOR_TWILIGHT_PURPLE = new THREE.Color('#c084fc');
+const COLOR_MOONLIGHT = new THREE.Color('#38bdf8');
+const COLOR_NIGHT_AMBIENT = new THREE.Color('#0b1d28');
+const COLOR_SUNSET_LIGHT = new THREE.Color('#f97316');
+const COLOR_SUNSET_AMBIENT = new THREE.Color('#9333ea');
+const COLOR_NIGHT_SKY_LIGHT = new THREE.Color('#7dd3fc');
+const COLOR_NIGHT_SKY_AMBIENT = new THREE.Color('#031525');
+
+const tempLightColor = new THREE.Color();
+const tempAmbientColor = new THREE.Color();
+
 export default function SkyAtmosphere({
   mode = 'day',
   cinematicProgress = 0,
@@ -22,10 +37,10 @@ export default function SkyAtmosphere({
     let sunY = 40;
     let sunX = 50;
     let sunZ = -100;
-    let lightColor = new THREE.Color('#fff7ed');
     let lightIntensity = 1.3;
-    let ambientColor = new THREE.Color('#e0f2fe');
     let ambientIntensity = 0.6;
+    tempLightColor.copy(COLOR_DAY_LIGHT);
+    tempAmbientColor.copy(COLOR_DAY_AMBIENT);
 
     if (mode === 'cinematic') {
       // 0.0 -> 0.4: Day turning to Golden Hour
@@ -38,7 +53,7 @@ export default function SkyAtmosphere({
         sunY = THREE.MathUtils.lerp(40, 15, t);
         sunX = THREE.MathUtils.lerp(50, 10, t);
         sunZ = THREE.MathUtils.lerp(-100, -140, t);
-        lightColor.lerp(new THREE.Color('#fbbf24'), t);
+        tempLightColor.copy(COLOR_DAY_LIGHT).lerp(COLOR_GOLDEN, t);
         lightIntensity = THREE.MathUtils.lerp(1.3, 1.1, t);
       } else if (p < 0.75) {
         const t = (p - 0.4) / 0.35;
@@ -46,8 +61,8 @@ export default function SkyAtmosphere({
         sunY = THREE.MathUtils.lerp(15, -2, t);
         sunX = THREE.MathUtils.lerp(10, 0, t);
         sunZ = -150;
-        lightColor.lerp(new THREE.Color('#f43f5e'), t); // Fiery sunset red/pink
-        ambientColor.lerp(new THREE.Color('#c084fc'), t); // Twilight purple
+        tempLightColor.copy(COLOR_GOLDEN).lerp(COLOR_SUNSET_ROSE, t);
+        tempAmbientColor.copy(COLOR_DAY_AMBIENT).lerp(COLOR_TWILIGHT_PURPLE, t);
         lightIntensity = THREE.MathUtils.lerp(1.1, 0.4, t);
         ambientIntensity = THREE.MathUtils.lerp(0.6, 0.3, t);
       } else {
@@ -55,23 +70,23 @@ export default function SkyAtmosphere({
         sunY = -25;
         sunX = 0;
         sunZ = -150;
-        lightColor.set('#38bdf8'); // Moonlight
+        tempLightColor.copy(COLOR_MOONLIGHT);
         lightIntensity = 0.25;
-        ambientColor.set('#0b1d28');
+        tempAmbientColor.copy(COLOR_NIGHT_AMBIENT);
         ambientIntensity = 0.35;
       }
     } else if (mode === 'sunset') {
       sunY = 4;
       sunX = 0;
       sunZ = -140;
-      lightColor.set('#f97316');
-      ambientColor.set('#9333ea');
+      tempLightColor.copy(COLOR_SUNSET_LIGHT);
+      tempAmbientColor.copy(COLOR_SUNSET_AMBIENT);
       lightIntensity = 0.8;
       ambientIntensity = 0.45;
     } else if (mode === 'night') {
       sunY = -30;
-      lightColor.set('#7dd3fc');
-      ambientColor.set('#031525');
+      tempLightColor.copy(COLOR_NIGHT_SKY_LIGHT);
+      tempAmbientColor.copy(COLOR_NIGHT_SKY_AMBIENT);
       lightIntensity = 0.2;
       ambientIntensity = 0.3;
     }
@@ -80,11 +95,11 @@ export default function SkyAtmosphere({
 
     if (lightRef.current) {
       lightRef.current.position.set(sunX, Math.max(sunY, 8), sunZ);
-      lightRef.current.color.copy(lightColor);
+      lightRef.current.color.copy(tempLightColor);
       lightRef.current.intensity = lightIntensity;
     }
     if (ambientRef.current) {
-      ambientRef.current.color.copy(ambientColor);
+      ambientRef.current.color.copy(tempAmbientColor);
       ambientRef.current.intensity = ambientIntensity;
     }
   });
